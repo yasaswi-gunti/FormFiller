@@ -48,7 +48,7 @@ class GoogleDriveDownloader:
             while not done:
                 status, done = downloader.next_chunk()
 
-            logger.info(f"Downloaded file with ID: {file_id}")
+            logger.debug(f"Downloaded file with ID: {file_id}")
             return file_bytes.getvalue()
         except Exception as e:
             logger.error(f"Error downloading file {file_id}: {e}")

@@ -112,7 +112,7 @@ class FormFiller:
 
             # Save filled form
             doc.save(output_path)
-            logger.debug(f"Saved: {output_path}")
+            logger.info(f"Saved: {output_path}")
         except Exception as e:
             logger.error(f"Error filling form: {e}")
 
