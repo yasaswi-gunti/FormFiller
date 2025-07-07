@@ -7,25 +7,27 @@ import json
 import fitz
 
 class FormFiller:
-    def __init__(self):
+    def __init__(self, template: bytes = None, coordinates: bytes = None):
         self.gdd = GoogleDriveDownloader()
-        self.load_statics()
-        
-    def load_statics(self, template_link:str = None, coordinates_link:str = None):
         # Fetch environment variables
         load_dotenv()
-        if not template_link:
+        if not template:
             template_link = os.getenv("TEMPLATE_FILE_LINK")
-        if not coordinates_link:
+            self.template_bytes = self.gdd.download_file(template_link)
+        else:
+            self.template_bytes = template
+        if not coordinates:
             coordinates_link = os.getenv("COORDINATES_FILE_LINK")
+            coordinates_bytes = self.gdd.download_file(coordinates_link)
+            self.coordinates = json.load(BytesIO(coordinates_bytes))
+        else:
+            self.coordinates = json.load(BytesIO(coordinates))
+
         tick_link = os.getenv("TICK_LINK")
-
-        self.template_bytes = self.gdd.download_file(template_link)
         self.tick_icon_bytes = self.gdd.download_file(tick_link)
-        coordinates_bytes = self.gdd.download_file(coordinates_link)
-        self.coordinates = json.load(BytesIO(coordinates_bytes))
+        
         logger.debug("Static files loaded successfully")
-
+        
     
     def insert_text(self, page, coordinates: dict, data):
         for field_name, coords in coordinates.items():

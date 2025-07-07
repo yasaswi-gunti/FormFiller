@@ -5,8 +5,6 @@ import tempfile
 import os
 import zipfile
 import io
-import time
-
 
 st.set_page_config(
     page_title="Consent Form Filler",
@@ -17,8 +15,8 @@ from src.form_filler import FormFiller
 from src.utils import get_output_file_name
 
 @st.cache_resource
-def get_form_filler():
-    return FormFiller()
+def get_form_filler(pdf_file=None, coords_file=None):
+    return FormFiller(pdf_file, coords_file)
 
 st.title("Consent Form Filler")
 
@@ -29,14 +27,15 @@ with st.expander("⬇️ Upload New Form and Coordiates (optional)"):
         pdf_file = st.file_uploader("Upload New Form Template", type="pdf")
     with col2:
         coords_file = st.file_uploader("Upload Coordinates JSON", type="json")
-
-if csv_file and pdf_file and coords_file:
-    st.success("All files uploaded! Ready to process.")
-    # ff.load_statics(pdf_file, coords_file)
-elif csv_file:
-    st.toast("Csv File Uploaded!")
 if csv_file:
-    ff = get_form_filler()
+    st.toast("Csv File Uploaded!")
+if pdf_file:
+    st.toast("New Template File Uploaded!")
+if coords_file:
+    st.toast("New Coordinates File Uploaded!")
+    
+
+if csv_file:
     gbcol, dbcol = st.columns(2)
     with gbcol:
         generate_button = st.button("Generate PDFs")
@@ -48,6 +47,10 @@ if csv_file:
     log_container = st.container()
 
     if generate_button:
+        if csv_file and pdf_file and coords_file:
+            ff = get_form_filler(pdf_file.getvalue(), coords_file.getvalue())
+        elif csv_file:
+            ff = get_form_filler()
         try:
             stringio = io.StringIO(csv_file.getvalue().decode("utf-8-sig"))
             reader = csv.DictReader(stringio)
@@ -78,7 +81,6 @@ if csv_file:
                             arcname = os.path.relpath(file_path, output_dir)
                             zipf.write(file_path, arcname=arcname)
                 zip_buffer.seek(0)
-
 
                 info_placeholder.success("PDFs generated!")
                 download_button_placeholder.download_button("Download All Forms (ZIP)", zip_buffer, "filled_forms.zip", "application/zip")
