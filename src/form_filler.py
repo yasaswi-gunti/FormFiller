@@ -1,4 +1,5 @@
-from utils import get_path, logger, format_date
+from src.utils import get_path, logger, format_date
+from src.drive_downloader import GoogleDriveDownloader
 import os
 import json
 import fitz
@@ -8,6 +9,7 @@ class FormFiller:
         self.template_path = get_path('template.pdf')
         self.tick_icon_path = get_path('tick.png')
         self.coordinates = self._load_coordinates()
+        self.gdd = GoogleDriveDownloader()
 
     def _load_coordinates(self):
         coord_path = get_path('coordinates.json')
@@ -20,8 +22,7 @@ class FormFiller:
             logger.error(f"Failed to load coordinates.json: {e}")
             return {}
     
-    @staticmethod
-    def insert_text(page, coordinates: dict, data):
+    def insert_text(self, page, coordinates: dict, data):
         for field_name, coords in coordinates.items():
             value = data.get(field_name, None)
             if value:
@@ -38,22 +39,28 @@ class FormFiller:
                 except Exception as e:
                     logger.error(f'Error inserting text at {coords}: {e}')
     
-    @staticmethod
-    def insert_images(page, images: dict, data):
+    def insert_images(self, page, images: dict, data):
         for field_name, rect_coords in images.items():
             image_path = data.get(field_name)
             if not image_path:
                 logger.warning(f'Image path not found for {field_name}')
-                
                 continue
-            try:
-                rect = fitz.Rect(*rect_coords)
-                page.insert_image(rect, filename=image_path)
-            except Exception as e:
-                logger.error(f'Error inserting image {field_name}: {e}')
+            rect = fitz.Rect(*rect_coords)
 
-    @staticmethod
-    def insert_checkmarks(page, checkboxes: list, data):
+            # Handle Google Drive links
+            if image_path.startswith("http"):
+                image_bytes = self.gdd.download_file(link=image_path)
+                if image_bytes:
+                    page.insert_image(rect, stream=image_bytes)
+                else:
+                    print(f'Could not download image for {field_name}')
+            else:
+                try:
+                    page.insert_image(rect, filename=image_path)
+                except Exception as e:
+                    logger.error(f'Error inserting image {field_name}: {e}')
+
+    def insert_checkmarks(self, page, checkboxes: list, data):
         #chechboxes= {'field1': {'option1': [x, y], 'option2': [x, y]}, 'field2': {...},..}
         tick_path = get_path('tick.png')
         if not os.path.exists(tick_path):
@@ -78,26 +85,27 @@ class FormFiller:
         # Insert text fields
         if "text_fields" in page_coordinates:
             logger.debug(f"Filling Text fields")
-            FormFiller.insert_text(page, page_coordinates['text_fields'], data)
+            self.insert_text(page, page_coordinates['text_fields'], data)
             logger.debug(f"Filling Text fields completed")
 
         if "images" in page_coordinates:
             logger.debug(f"Inserting Images")
-            FormFiller.insert_images(page, page_coordinates['images'], data)
+            self.insert_images(page, page_coordinates['images'], data)
             logger.debug(f"Inserting Images completed")
 
         if "checkboxes" in page_coordinates:
             logger.debug(f"Filling Checkboxes")
-            FormFiller.insert_checkmarks(page, page_coordinates['checkboxes'], data)
+            self.insert_checkmarks(page, page_coordinates['checkboxes'], data)
             logger.debug(f"Filling Checkboxes completed")
 
 
     def fill(self, player_data: dict, output_path: str):
         """Fill the form template with player data and save as PDF."""
+        #Normalizing data
+        player_data['gender'] = player_data['gender'].lower()
         try:
             logger.debug(f"Opening template {self.template_path}")
             doc = fitz.open(self.template_path)
-            
 
             for page_number, page_coordinates in enumerate(self.coordinates.get('pages',[])):
                 self.fill_page(doc, page_number, page_coordinates, player_data)

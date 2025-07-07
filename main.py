@@ -1,7 +1,8 @@
 from src.form_filler import FormFiller
+from src.utils import logger
+
 import csv
 import os
-from src.utils import logger
 
 def get_output_file_name(player_data):
     player_name = player_data['playersname'].replace(' ','-')
@@ -16,6 +17,7 @@ def fill_forms(csv_file, output_dir='.'):
         output_file_name = os.path.join(output_dir, row['batch'], get_output_file_name(row))
         os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
         ff.fill(row, output_file_name)
+        logger.info(f"Saved: {output_file_name}")
         
 if __name__ == "__main__":
     import argparse
