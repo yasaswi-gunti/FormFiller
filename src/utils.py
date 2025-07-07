@@ -2,6 +2,9 @@ import os
 import logging
 import re
 
+def get_project_root():
+    return os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
+
 def get_output_file_name(player_name: str):
     cleaned = re.sub(r'[^A-Za-z0-9 ]+', '', player_name)
     cleaned = cleaned.replace(' ', '-')
