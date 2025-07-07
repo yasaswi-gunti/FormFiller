@@ -54,8 +54,12 @@ class GoogleDriveDownloader:
             logger.error(f"Error downloading file {file_id}: {e}")
             return None
         
-    def download_file(self, link):
+    def download_file(self, link: str) -> bytes:
         file_id = self.extract_drive_file_id(link)
+        if not file_id:
+            logger.error(f"Could not extract file ID from link: {link}")
+            raise ValueError("Invalid Google Drive link")
+
         return self._download_file(file_id)
         
     @staticmethod

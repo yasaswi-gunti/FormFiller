@@ -1,26 +1,31 @@
-from src.utils import get_path, logger, format_date
+from src.utils import logger, format_date
 from src.drive_downloader import GoogleDriveDownloader
 import os
+from  dotenv import load_dotenv
+from io import BytesIO
 import json
 import fitz
 
 class FormFiller:
     def __init__(self):
-        self.template_path = get_path('template.pdf')
-        self.tick_icon_path = get_path('tick.png')
-        self.coordinates = self._load_coordinates()
         self.gdd = GoogleDriveDownloader()
+        self.load_statics()
+        
+    def load_statics(self, template_link:str = None, coordinates_link:str = None):
+        # Fetch environment variables
+        load_dotenv()
+        if not template_link:
+            template_link = os.getenv("TEMPLATE_FILE_LINK")
+        if not coordinates_link:
+            coordinates_link = os.getenv("COORDINATES_FILE_LINK")
+        tick_link = os.getenv("TICK_LINK")
 
-    def _load_coordinates(self):
-        coord_path = get_path('coordinates.json')
-        try:
-            with open(coord_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except FileNotFoundError as e:
-            logger.error(f"Coordinates file Not Found at {coord_path}")
-        except Exception as e:
-            logger.error(f"Failed to load coordinates.json: {e}")
-            return {}
+        self.template_bytes = self.gdd.download_file(template_link)
+        self.tick_icon_bytes = self.gdd.download_file(tick_link)
+        coordinates_bytes = self.gdd.download_file(coordinates_link)
+        self.coordinates = json.load(BytesIO(coordinates_bytes))
+        logger.debug("Static files loaded successfully")
+
     
     def insert_text(self, page, coordinates: dict, data):
         for field_name, coords in coordinates.items():
@@ -29,7 +34,7 @@ class FormFiller:
                 fontsize = 12
                 if "contact" in field_name or "email" in field_name:
                     value = value.replace(" ", "")
-                if 'dob' in field_name:
+                elif 'dob' in field_name:
                     value = format_date(value)
                 if len(value) > 19:
                     value = value.title()
@@ -62,18 +67,14 @@ class FormFiller:
 
     def insert_checkmarks(self, page, checkboxes: list, data):
         #chechboxes= {'field1': {'option1': [x, y], 'option2': [x, y]}, 'field2': {...},..}
-        tick_path = get_path('tick.png')
-        if not os.path.exists(tick_path):
-            logger.error(f'Tick image not found at {tick_path}')
-            return
 
         for field_name, options in checkboxes.items():
             #options: dict = {'opt1': [coords], 'opt2': [coords]}
             if field_name in data:
                 try:
-                    x, y = options.get(data.get(field_name))
+                    x, y = options.get(data.get(field_name).lower())
                     rect = fitz.Rect(x, y - 15, x + 15, y + 15)
-                    page.insert_image(rect, filename=tick_path)
+                    page.insert_image(rect, stream=self.tick_icon_bytes)
                 except Exception as e:
                     logger.error(f'Error inserting checkmark for {field_name}: {e}')
         
@@ -101,11 +102,8 @@ class FormFiller:
 
     def fill(self, player_data: dict, output_path: str):
         """Fill the form template with player data and save as PDF."""
-        #Normalizing data
-        player_data['gender'] = player_data['gender'].lower()
         try:
-            logger.debug(f"Opening template {self.template_path}")
-            doc = fitz.open(self.template_path)
+            doc = fitz.open(stream=self.template_bytes, filetype='pdf')
 
             for page_number, page_coordinates in enumerate(self.coordinates.get('pages',[])):
                 self.fill_page(doc, page_number, page_coordinates, player_data)

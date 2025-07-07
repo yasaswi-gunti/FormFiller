@@ -1,11 +1,8 @@
 from src.form_filler import FormFiller
+from src.utils import get_output_file_name
 
 import csv
 import os
-
-def get_output_file_name(player_data):
-    player_name = player_data['playersname'].replace(' ','-')
-    return os.path.join(f"{player_name}.pdf")
 
 def fill_forms(csv_file, output_dir='.'):
     with open(csv_file, 'r', encoding='utf-8-sig') as file:
