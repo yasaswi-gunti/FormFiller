@@ -7,6 +7,12 @@ import zipfile
 import io
 import time
 
+
+st.set_page_config(
+    page_title="Consent Form Filler",
+    page_icon="💾"
+)
+
 from src.form_filler import FormFiller
 from src.utils import get_output_file_name
 
