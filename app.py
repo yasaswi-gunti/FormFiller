@@ -40,7 +40,6 @@ if 'generation_complete' not in st.session_state:
 if 'zip_buffer' not in st.session_state:
     st.session_state['zip_buffer'] = None
     
-
 if csv_file:
     gbcol, dbcol = st.columns(2)
     with gbcol:
@@ -88,9 +87,6 @@ if csv_file:
                     ff.fill(row, output_file_path)
                     files_count += 1
                     progress_holder.write(f"Forms Filled : **{files_count} / {total_files}**")
-                
-                current_file.write('')
-                progress_holder.write('')
 
                 # Create ZIP
                 zip_buffer = io.BytesIO()
@@ -109,11 +105,14 @@ if csv_file:
             st.error(f"Something went wrong: {e}")
 
     if st.session_state.get('generation_complete'):
-        info_placeholder.success("Forms Filled Successfully! Download the zip file")
-
         download_button_placeholder.download_button(
             "Download All Forms (ZIP)",
             st.session_state['zip_buffer'],
             "filled_forms.zip",
             "application/zip"
         )
+
+        current_file.write('')
+        progress_holder.write('')
+
+        info_placeholder.success("Forms Filling Completed! Download the zip file")
