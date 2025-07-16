@@ -32,15 +32,18 @@ class FormFiller:
     def insert_text(self, page, coordinates: dict, data):
         for field_name, coords in coordinates.items():
             value = data.get(field_name, None)
-            if value:
-                fontsize = 12
-                if "contact" in field_name or "email" in field_name:
-                    value = value.replace(" ", "")
-                elif 'dob' in field_name:
-                    value = format_date(value)
-                if len(value) > 19:
-                    value = value.title()
-                    fontsize = 10
+            if value is not None:
+                try:
+                    fontsize = 12
+                    if "contact" in field_name or "email" in field_name:
+                        value = value.replace(" ", "")
+                    elif 'dob' in field_name:
+                        value = format_date(value)
+                    elif len(value) > 19:
+                        value = value.title()
+                        fontsize = 10
+                except Exception as e:
+                    logger.error(f"Error formatting the text values: {e}")
                 try:
                     page.insert_text(coords, value, fontsize=fontsize, color=(0.0, 0.4667, 0.8314))
                 except Exception as e:
@@ -88,17 +91,26 @@ class FormFiller:
         # Insert text fields
         if "text_fields" in page_coordinates:
             logger.debug(f"Filling Text fields")
-            self.insert_text(page, page_coordinates['text_fields'], data)
+            try:
+                self.insert_text(page, page_coordinates['text_fields'], data)
+            except Exception as e:
+                logger.error(f"Error inserting text: {e}")
             logger.debug(f"Filling Text fields completed")
 
         if "images" in page_coordinates:
             logger.debug(f"Inserting Images")
-            self.insert_images(page, page_coordinates['images'], data)
+            try:
+                self.insert_images(page, page_coordinates['images'], data)
+            except Exception as e:
+                logger.error(f"Error inserting images: {e}")
             logger.debug(f"Inserting Images completed")
 
         if "checkboxes" in page_coordinates:
             logger.debug(f"Filling Checkboxes")
-            self.insert_checkmarks(page, page_coordinates['checkboxes'], data)
+            try:
+                self.insert_checkmarks(page, page_coordinates['checkboxes'], data)
+            except Exception as e:
+                logger.error(f"Error inserting checkmarks: {e}")
             logger.debug(f"Filling Checkboxes completed")
 
 
@@ -114,7 +126,7 @@ class FormFiller:
             doc.save(output_path)
             logger.info(f"Saved: {output_path}")
         except Exception as e:
-            logger.error(f"Error filling form: {e}")
+            logger.error(f"Error filling form!: {e}")
 
 if __name__ == "__main__":
     ff = FormFiller()
